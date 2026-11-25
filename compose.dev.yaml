@@ -1,0 +1,42 @@
+# Developer override for running the backend and frontend outside Docker.
+#
+# The base `compose.yaml` never publishes PostgreSQL or Redis, which is the
+# correct default for a deployed stack. When working on the Rust backend with
+# `cargo run` (or the frontend with `pnpm dev`), the process lives on the host
+# and needs to reach the containers.
+#
+#   docker compose -f compose.yaml -f compose.dev.yaml up -d postgres redis
+#   docker compose -f compose.yaml -f compose.dev.yaml down
+#
+# Two details matter here and are easy to get wrong:
+#
+# * Docker silently ignores `ports:` for a service that is attached only to an
+#   `internal: true` network, because such a network has no route off the host.
+#   Both services therefore also join the non-internal `edge` network.
+# * The published bindings are pinned to loopback, so nothing becomes reachable
+#   from the local network.
+#
+# Do not deploy with this file.
+
+services:
+  postgres:
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    networks:
+      - internal
+      - edge
+
+  redis:
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    networks:
+      - internal
+      - edge
+
+  # The applications run on the host in this mode; the containers would fight
+  # for the same ports. `profiles` keeps them out unless asked for explicitly.
+  backend:
+    profiles: ["containerised"]
+
+  frontend:
+    profiles: ["containerised"]

@@ -1,0 +1,24 @@
+[package]
+name = "platform-application"
+description = "Application use cases and ports for the platform"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+platform-domain = { workspace = true }
+platform-shared = { workspace = true }
+
+async-trait = { workspace = true }
+chrono = { workspace = true }
+futures-util = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }
+
+[lints.rust]
+unsafe_code = "forbid"

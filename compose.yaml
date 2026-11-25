@@ -1,0 +1,157 @@
+# Development and self-hosted topology for the V0.1 infrastructure.
+#
+# Security decisions that are structural, not conventional:
+#
+# * PostgreSQL and Redis have no `ports:` mapping. They are reachable only from
+#   the internal network, so a misconfigured host firewall cannot expose them.
+# * Only the backend API and the frontend reverse proxy are published, and both
+#   bind to loopback by default through `APP_BIND_ADDRESS`.
+# * Every service has a healthcheck and dependants wait for `service_healthy`
+#   instead of relying on start order.
+# * Containers either run as a non-root user (built images) or use the official
+#   image's unprivileged entrypoint behaviour documented below.
+# * Data lives in named volumes. `docker compose down` never removes them.
+
+name: platform
+
+services:
+  postgres:
+    image: postgres:16.16-alpine3.24
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB in .env}
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      # Deterministic cluster settings: UTC timestamps and a checksummed WAL.
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+      TZ: UTC
+    command:
+      - postgres
+      - -c
+      - timezone=UTC
+      - -c
+      - log_timezone=UTC
+      - -c
+      - max_connections=100
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB} -h 127.0.0.1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    security_opt:
+      - no-new-privileges:true
+
+  redis:
+    image: redis:8.8.4-alpine3.23
+    restart: unless-stopped
+    # No persistence: Redis is auxiliary infrastructure here, never the source
+    # of truth. The volume keeps it usable if persistence is enabled later.
+    command:
+      - redis-server
+      - --appendonly
+      - "no"
+      - --save
+      - ""
+      - --maxmemory-policy
+      - noeviction
+    volumes:
+      - redis-data:/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+
+  backend:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/backend.Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      APP_ENV: ${APP_ENV:-production}
+      APP_HOST: 0.0.0.0
+      APP_PORT: "8080"
+      APP_LOG_FORMAT: ${APP_LOG_FORMAT:-json}
+      APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS:?set APP_CORS_ALLOWED_ORIGINS in .env}
+      APP_SWAGGER_ENABLED: ${APP_SWAGGER_ENABLED:-false}
+      APP_REQUEST_BODY_LIMIT_BYTES: ${APP_REQUEST_BODY_LIMIT_BYTES:-1048576}
+      APP_SHUTDOWN_TIMEOUT_SECONDS: ${APP_SHUTDOWN_TIMEOUT_SECONDS:-30}
+      APP_READINESS_TIMEOUT_MS: ${APP_READINESS_TIMEOUT_MS:-2000}
+      APP_WS_HEARTBEAT_SECONDS: ${APP_WS_HEARTBEAT_SECONDS:-30}
+      DATABASE_URL: postgres://${POSTGRES_USER:?set POSTGRES_USER in .env}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:?set POSTGRES_DB in .env}
+      DATABASE_MAX_CONNECTIONS: ${DATABASE_MAX_CONNECTIONS:-10}
+      DATABASE_MIN_CONNECTIONS: ${DATABASE_MIN_CONNECTIONS:-1}
+      DATABASE_ACQUIRE_TIMEOUT_SECONDS: ${DATABASE_ACQUIRE_TIMEOUT_SECONDS:-5}
+      DATABASE_MIGRATE: ${DATABASE_MIGRATE:-true}
+      REDIS_URL: redis://redis:6379
+      REDIS_TIMEOUT_MS: ${REDIS_TIMEOUT_MS:-2000}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8081}
+      RUST_LOG: ${RUST_LOG:-info}
+    ports:
+      # Loopback only by default; set APP_BIND_ADDRESS=0.0.0.0 to publish.
+      - "${APP_BIND_ADDRESS:-127.0.0.1}:${BACKEND_PORT:-8080}:8080"
+    networks:
+      - internal
+      - edge
+    healthcheck:
+      test:
+        ["CMD", "curl", "--fail", "--silent", "--show-error", "--max-time", "4", "http://127.0.0.1:8080/api/v1/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+
+  frontend:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/frontend.Dockerfile
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${APP_BIND_ADDRESS:-127.0.0.1}:${FRONTEND_PORT:-8081}:8080"
+    networks:
+      - edge
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:8080/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+
+networks:
+  # Internal network: no route to the host, used by every dependency.
+  internal:
+    internal: true
+  # Edge network: only the components that must accept traffic from the browser.
+  edge:
+    driver: bridge
+
+volumes:
+  postgres-data:
+    name: platform-postgres-data
+  redis-data:
+    name: platform-redis-data

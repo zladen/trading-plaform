@@ -1,0 +1,185 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+# A newer push to the same ref supersedes the running build.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+  # Keep the toolchain and cache behaviour identical to the Dockerfile.
+  RUST_TOOLCHAIN: "1.97.1"
+
+jobs:
+  backend:
+    name: Backend (Rust)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16.16-alpine3.24
+        env:
+          POSTGRES_DB: platform_test
+          POSTGRES_USER: platform
+          POSTGRES_PASSWORD: platform_test_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U platform -d platform_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:8.8.4-alpine3.23
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # Dedicated test database, never the application database.
+      TEST_DATABASE_URL: postgres://platform:platform_test_password@127.0.0.1:5432/platform_test
+      TEST_REDIS_URL: redis://127.0.0.1:6379
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the pinned toolchain
+        run: |
+          rustup toolchain install "$RUST_TOOLCHAIN" \
+            --profile minimal \
+            --component rustfmt,clippy
+          rustup default "$RUST_TOOLCHAIN"
+
+      - name: Cache Cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: backend
+          # The cache key must change with the toolchain and the lockfile.
+          key: ${{ env.RUST_TOOLCHAIN }}
+
+      - name: Formatting
+        run: cargo fmt --all -- --check
+
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+
+      - name: Tests
+        run: cargo test --workspace
+
+  frontend:
+    name: Frontend (React)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.16.1
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type check
+        run: pnpm --filter @platform/frontend typecheck
+
+      - name: Lint
+        run: pnpm --filter @platform/frontend lint
+
+      - name: Formatting check
+        run: pnpm --filter @platform/frontend format:check
+
+      - name: Tests
+        run: pnpm --filter @platform/frontend test
+
+      - name: Build
+        run: pnpm --filter @platform/frontend build
+
+  contract:
+    name: OpenAPI contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the pinned toolchain
+        run: |
+          rustup toolchain install "$RUST_TOOLCHAIN" --profile minimal
+          rustup default "$RUST_TOOLCHAIN"
+
+      - name: Cache Cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: contract
+          key: ${{ env.RUST_TOOLCHAIN }}
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.16.1
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Regenerate the document and the types
+        run: pnpm api:openapi && pnpm api:types
+
+      - name: Fail when either artefact is stale
+        run: |
+          if ! git diff --exit-code -- \
+            apps/frontend/src/shared/api/generated/openapi.json \
+            apps/frontend/src/shared/api/generated/schema.d.ts; then
+            echo "::error::The committed OpenAPI artefacts are stale."
+            echo "Run 'pnpm api:openapi && pnpm api:types' and commit the result."
+            exit 1
+          fi
+
+  infrastructure:
+    name: Infrastructure
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate the Compose file
+        run: cp .env.example .env && docker compose config --quiet
+
+      - name: Validate both Dockerfiles
+        run: |
+          docker build --check -f infrastructure/docker/backend.Dockerfile .
+          docker build --check -f infrastructure/docker/frontend.Dockerfile .
+
+      - name: Build and start the stack
+        run: docker compose --env-file .env up --build --detach --wait
+
+      - name: End-to-end smoke test
+        run: node tests/integration/smoke.mjs
+
+      - name: Container logs on failure
+        if: failure()
+        run: docker compose logs --tail=200
+
+      - name: Tear down
+        if: always()
+        run: docker compose --env-file .env down --remove-orphans

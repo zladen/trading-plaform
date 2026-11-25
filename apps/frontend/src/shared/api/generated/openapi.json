@@ -1,0 +1,615 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Platform API",
+    "description": "Infrastructure API of the automated cryptocurrency trading platform. V0.1 exposes system endpoints only: liveness, readiness and service information.",
+    "license": {
+      "name": "Proprietary"
+    },
+    "version": "0.1.0"
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Check process liveness",
+        "description": "Reports whether the current process is able to serve HTTP requests. This endpoint does not contact PostgreSQL or Redis and must stay cheap, because container orchestrators poll it frequently and treat failures as a reason to restart the container.",
+        "operationId": "health",
+        "responses": {
+          "200": {
+            "description": "The process is running",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthSuccess"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/info": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Describe the running service",
+        "description": "Returns build metadata, the deployment environment and process uptime. Clients use this endpoint to display the backend version and to confirm which environment they are connected to.",
+        "operationId": "info",
+        "responses": {
+          "200": {
+            "description": "Service information",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InfoSuccess"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/openapi.json": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Retrieve the OpenAPI document",
+        "description": "Returns the OpenAPI 3.1 description of this API. It is the same document the frontend generates its types from, so it is the authoritative contract rather than a hand-maintained summary.",
+        "operationId": "openapi",
+        "responses": {
+          "200": {
+            "description": "The OpenAPI document",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The document could not be serialised",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ready": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Check dependency readiness",
+        "description": "Verifies that every required infrastructure dependency answers. A `200` response means the service is ready to receive traffic; `503` means at least one dependency is unreachable and the process must not be reported as ready. The response body lists each dependency with its measured latency and failure reason.",
+        "operationId": "ready",
+        "responses": {
+          "200": {
+            "description": "All dependencies are reachable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadySuccess"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "At least one dependency is unreachable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadySuccess"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ws": {
+      "get": {
+        "tags": [
+          "websocket"
+        ],
+        "summary": "Open a WebSocket connection",
+        "description": "Establishes a WebSocket connection for live updates. On V0.1 the server sends a `connected` frame with the connection identifier and the protocol version, then a `heartbeat` frame on a fixed interval. Clients may send `{\"type\":\"ping\"}` and receive `{\"type\":\"pong\"}`; trading and market data events are not part of V0.1.",
+        "operationId": "websocket",
+        "responses": {
+          "101": {
+            "description": "Protocol switch to WebSocket"
+          },
+          "400": {
+            "description": "Malformed upgrade request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ClientMessage": {
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "Liveness check initiated by the client.",
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "payload": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Optional payload echoed back in [`ServerMessage::Pong`]."
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "ping"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "A client acknowledgement of a server heartbeat.",
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "pong"
+                ]
+              }
+            }
+          }
+        ],
+        "description": "Client to server message."
+      },
+      "DependencyCheckDto": {
+        "type": "object",
+        "description": "Single dependency readiness result.",
+        "required": [
+          "dependency",
+          "status",
+          "latency_ms"
+        ],
+        "properties": {
+          "dependency": {
+            "type": "string",
+            "description": "Dependency identifier, for example `postgres`."
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Failure reason when the probe failed."
+          },
+          "latency_ms": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Probe duration in milliseconds.",
+            "minimum": 0
+          },
+          "status": {
+            "type": "string",
+            "description": "Dependency state: `up` or `down`."
+          }
+        }
+      },
+      "ErrorBody": {
+        "type": "object",
+        "description": "Error payload returned to clients.",
+        "required": [
+          "code",
+          "message"
+        ],
+        "properties": {
+          "code": {
+            "$ref": "#/components/schemas/ErrorCode",
+            "description": "Stable machine readable code."
+          },
+          "details": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FieldError"
+            },
+            "description": "Optional field level details."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human readable explanation."
+          }
+        }
+      },
+      "ErrorCode": {
+        "type": "string",
+        "description": "Machine readable error codes used by API clients.",
+        "enum": [
+          "not_found",
+          "method_not_allowed",
+          "validation_failed",
+          "payload_too_large",
+          "request_timeout",
+          "dependency_unavailable",
+          "internal"
+        ]
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "description": "Unified error envelope.",
+        "required": [
+          "success",
+          "error",
+          "request_id"
+        ],
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ErrorBody",
+            "description": "Error payload."
+          },
+          "request_id": {
+            "type": "string",
+            "description": "Request identifier for correlation with server logs."
+          },
+          "success": {
+            "type": "boolean",
+            "description": "Always `false`."
+          }
+        }
+      },
+      "FieldError": {
+        "type": "object",
+        "description": "Field level validation detail.",
+        "required": [
+          "field",
+          "message"
+        ],
+        "properties": {
+          "field": {
+            "type": "string",
+            "description": "Name of the offending field."
+          },
+          "message": {
+            "type": "string",
+            "description": "Explanation of the violation."
+          }
+        }
+      },
+      "HealthDto": {
+        "type": "object",
+        "description": "Health probe payload.",
+        "required": [
+          "status",
+          "uptime_seconds",
+          "checked_at"
+        ],
+        "properties": {
+          "checked_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Moment of the check in UTC."
+          },
+          "status": {
+            "type": "string",
+            "description": "Process status; always `up` for a served response."
+          },
+          "uptime_seconds": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Seconds the process has been running.",
+            "minimum": 0
+          }
+        }
+      },
+      "HealthSuccess": {
+        "type": "object",
+        "description": "OpenAPI schema aliases so that documented responses can reference the\ngeneric envelope specialisation without duplicating DTO definitions.",
+        "required": [
+          "success",
+          "data",
+          "request_id"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/HealthDto",
+            "description": "Health payload."
+          },
+          "request_id": {
+            "type": "string",
+            "description": "Request identifier."
+          },
+          "success": {
+            "type": "boolean",
+            "description": "Always `true`."
+          }
+        }
+      },
+      "InfoDto": {
+        "type": "object",
+        "description": "Service information payload.",
+        "required": [
+          "name",
+          "version",
+          "environment",
+          "started_at",
+          "uptime_seconds",
+          "websocket_path"
+        ],
+        "properties": {
+          "environment": {
+            "type": "string",
+            "description": "Deployment environment."
+          },
+          "name": {
+            "type": "string",
+            "description": "Application name."
+          },
+          "rust_version": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Rust toolchain used for the build."
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Instant the process started at."
+          },
+          "uptime_seconds": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Seconds the process has been running.",
+            "minimum": 0
+          },
+          "version": {
+            "type": "string",
+            "description": "Application version."
+          },
+          "websocket_path": {
+            "type": "string",
+            "description": "WebSocket endpoint path for live updates."
+          }
+        }
+      },
+      "InfoSuccess": {
+        "type": "object",
+        "description": "Documented info response envelope.",
+        "required": [
+          "success",
+          "data",
+          "request_id"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/InfoDto",
+            "description": "Service information payload."
+          },
+          "request_id": {
+            "type": "string",
+            "description": "Request identifier."
+          },
+          "success": {
+            "type": "boolean",
+            "description": "Always `true`."
+          }
+        }
+      },
+      "ReadyDto": {
+        "type": "object",
+        "description": "Readiness probe payload.",
+        "required": [
+          "status",
+          "ready",
+          "checks",
+          "checked_at"
+        ],
+        "properties": {
+          "checked_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Moment of the check in UTC."
+          },
+          "checks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DependencyCheckDto"
+            },
+            "description": "Per dependency results."
+          },
+          "ready": {
+            "type": "boolean",
+            "description": "Whether every dependency answered."
+          },
+          "status": {
+            "type": "string",
+            "description": "Overall readiness: `ready` or `not_ready`."
+          }
+        }
+      },
+      "ReadySuccess": {
+        "type": "object",
+        "description": "Documented readiness response envelope.",
+        "required": [
+          "success",
+          "data",
+          "request_id"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ReadyDto",
+            "description": "Readiness payload."
+          },
+          "request_id": {
+            "type": "string",
+            "description": "Request identifier."
+          },
+          "success": {
+            "type": "boolean",
+            "description": "Always `true`."
+          }
+        }
+      },
+      "ServerMessage": {
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "Sent immediately after a successful handshake.",
+            "required": [
+              "connection_id",
+              "protocol_version",
+              "type"
+            ],
+            "properties": {
+              "connection_id": {
+                "type": "string",
+                "description": "Connection identifier assigned by the server."
+              },
+              "protocol_version": {
+                "type": "integer",
+                "format": "int32",
+                "description": "Protocol version of the message envelope.",
+                "minimum": 0
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "connected"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Periodic heartbeat proving the connection is alive.",
+            "required": [
+              "server_time",
+              "type"
+            ],
+            "properties": {
+              "server_time": {
+                "type": "string",
+                "description": "Server time in RFC 3339 format."
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "heartbeat"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Sent before the server closes the connection.",
+            "required": [
+              "reason",
+              "type"
+            ],
+            "properties": {
+              "reason": {
+                "type": "string",
+                "description": "Human readable reason."
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "closing"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Result of a client ping request.",
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "payload": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Echo of the optional client payload."
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "pong"
+                ]
+              }
+            }
+          }
+        ],
+        "description": "Server to client message."
+      }
+    },
+    "securitySchemes": {
+      "bearer_auth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Reserved for the authentication stage. No endpoint requires it in V0.1."
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "system",
+      "description": "Liveness, readiness and service metadata"
+    },
+    {
+      "name": "websocket",
+      "description": "Live updates transport"
+    }
+  ]
+}

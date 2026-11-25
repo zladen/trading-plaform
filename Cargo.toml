@@ -1,0 +1,91 @@
+[workspace]
+resolver = "3"
+members = [
+    "apps/backend",
+    "crates/application",
+    "crates/domain",
+    "crates/shared",
+    "crates/storage",
+]
+default-members = [
+    "apps/backend",
+    "crates/application",
+    "crates/domain",
+    "crates/shared",
+    "crates/storage",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.94"
+license = "proprietary"
+authors = ["Platform Team"]
+
+[workspace.dependencies]
+# Internal crates
+platform-application = { path = "crates/application" }
+platform-domain = { path = "crates/domain" }
+platform-shared = { path = "crates/shared" }
+platform-storage = { path = "crates/storage" }
+
+# Async runtime
+tokio = { version = "1.54", features = ["macros", "rt-multi-thread", "signal", "net", "time"] }
+tokio-util = { version = "0.7", features = ["rt"] }
+futures-util = "0.3"
+async-trait = "0.1"
+
+# HTTP
+axum = { version = "0.8", features = ["ws", "macros"] }
+tower = { version = "0.5", features = ["util"] }
+# Only the features the router actually uses: catch-panic, CORS and HTTP tracing.
+# Timeouts, request ids and body limits are implemented in `apps/backend/src/http`.
+tower-http = { version = "0.7", features = ["catch-panic", "cors", "trace"] }
+
+# Persistence
+sqlx = { version = "0.9", default-features = false, features = [
+    "runtime-tokio",
+    "tls-rustls-ring",
+    "postgres",
+    "macros",
+    "migrate",
+    "chrono",
+    "uuid",
+] }
+redis = { version = "1.8", default-features = false, features = [
+    "tokio-comp",
+    "connection-manager",
+] }
+
+# Serialization and data types
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+
+# Pinned for the stage that introduces monetary values and inbound request
+# bodies. V0.1 has neither, so no crate depends on them yet; declaring them here
+# keeps the toolchain decision recorded instead of being made ad hoc later.
+rust_decimal = { version = "1", features = ["serde-with-str"] }
+validator = { version = "0.21", features = ["derive"] }
+
+# Configuration
+dotenvy = "0.15"
+url = "2"
+
+# Observability and errors
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json", "fmt", "time"] }
+thiserror = "2"
+anyhow = "1"
+
+# OpenAPI
+utoipa = { version = "6", features = ["axum_extras", "chrono", "uuid", "decimal", "url"] }
+# `vendored` bundles the Swagger UI assets in the crate instead of downloading
+# them from the network in `build.rs`. That keeps the Docker build and CI
+# offline-capable and reproducible: the assets are pinned by the lockfile and
+# verified against a checksum, rather than fetched at an arbitrary moment.
+utoipa-swagger-ui = { version = "10", features = ["axum", "vendored"] }
+
+# Development and testing
+tokio-tungstenite = "0.29"

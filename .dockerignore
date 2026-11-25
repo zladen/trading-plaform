@@ -1,0 +1,34 @@
+# Keep the build context small and prevent local secrets from reaching an image.
+
+# Version control and local configuration
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+secrets/
+opencode.json
+skills-lock.json
+
+# Rust build output; images compile from source on purpose.
+target/
+**/*.rs.bk
+
+# Node
+node_modules/
+.pnpm-store/
+apps/frontend/dist/
+*.tsbuildinfo
+
+# Documentation and tooling that the images do not need
+docs/
+.agents/
+.github/
+*.md
+Makefile
+
+# Editors and operating system
+.idea/
+.vscode/
+.DS_Store
+*.log

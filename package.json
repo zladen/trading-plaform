@@ -1,0 +1,23 @@
+{
+	"name": "platform",
+	"private": true,
+	"version": "0.1.0",
+	"description": "Automated cryptocurrency trading platform",
+	"engines": {
+		"node": ">=24"
+	},
+	"packageManager": "pnpm@12.16.1",
+	"scripts": {
+		"dev": "pnpm --filter @platform/frontend dev",
+		"build": "pnpm --filter @platform/frontend build",
+		"lint": "pnpm --filter @platform/frontend lint",
+		"test": "pnpm --filter @platform/frontend test",
+		"typecheck": "pnpm --filter @platform/frontend typecheck",
+		"format": "pnpm --filter @platform/frontend format",
+		"api:types": "pnpm --filter @platform/frontend api:types",
+		"api:openapi": "cargo run --quiet --package platform-backend --bin platform-openapi -- apps/frontend/src/shared/api/generated/openapi.json"
+	},
+	"devDependencies": {
+		"prettier": "3.10.1"
+	}
+}

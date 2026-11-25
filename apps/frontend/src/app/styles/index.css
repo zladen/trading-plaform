@@ -1,0 +1,46 @@
+@import "tailwindcss";
+
+/*
+ * Dark-first theme.
+ *
+ * The platform is an operator tool: it is read for long stretches and inherits
+ * the surrounding terminal environment, so the dark palette is the default and
+ * the light palette is provided only for the `data-theme="light"` override.
+ */
+
+@theme {
+	--font-sans:
+		"Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+		sans-serif;
+	--font-mono: ui-monospace, "SFMono-Regular", "Cascadia Code", Menlo, monospace;
+}
+
+:root {
+	color-scheme: dark;
+}
+
+html,
+body,
+#root {
+	height: 100%;
+}
+
+body {
+	margin: 0;
+	background-color: var(--color-slate-950);
+	color: var(--color-slate-200);
+	font-family: var(--font-sans);
+	-webkit-font-smoothing: antialiased;
+}
+
+/* Respect the operating system's reduced motion preference. */
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
+	}
+}
