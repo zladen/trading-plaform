@@ -445,6 +445,9 @@ content here; read them.
   thresholds.
 - Record results in `RUST_LEARNING_PROGRESS.md` only after an assessment actually
   ran.
+- Every lesson is developed in its own branch off `main`, named
+  `lesson/<week>-<day>-<topic>`. Never work on lesson code directly in `main`.
+  See `RUST_LEARNING_TRACKING.md`, section 14.
 - Learning tasks must fit the current project stage (V0.1) and must not introduce
   exchange integrations, strategies, backtesting or authentication.
 - Do not change the application architecture merely to create an exercise.

@@ -74,6 +74,17 @@
 
 - None.
 
+## Lesson Branches
+
+Каждое занятие — отдельная ветка от `main` с именем
+`lesson/<week>-<day>-<topic>`, например `lesson/01-01-cargo-setup`
+(см. `RUST_LEARNING_TRACKING.md`, раздел 14). Работа напрямую в `main` для
+учебных задач запрещена.
+
+| Lesson | Branch | Commit | Status | Merged |
+| ------ | ------ | ------ | ------ | ------ |
+| —      | —      | —      | —      | —      |
+
 ## Session Log
 
 | Date | Action | Result |
