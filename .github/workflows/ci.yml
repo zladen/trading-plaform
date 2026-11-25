@@ -1,6 +1,9 @@
 name: CI
 
 on:
+  # Every branch, including the per-lesson `lesson/*` branches. A bare `push:`
+  # is used instead of a `branches: ["**"]` glob because the glob was observed
+  # to match nothing here, while a bare trigger fires reliably.
   push:
   pull_request:
   # Allows starting the pipeline by hand from the Actions tab or with
