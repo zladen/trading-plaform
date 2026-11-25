@@ -1,0 +1,16 @@
+name: Probe
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  echo:
+    name: Echo
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Print a line
+        run: echo "probe triggered"
