@@ -17,15 +17,15 @@
 - Current lesson: Week 1, Day 1
 - Current topic: Основы Rust, Cargo и структура проекта
 - Current task: создать `training/rust-basics`, исключить `training` из workspace, разобрать структуру Cargo-проекта
-- Lesson status: `BLOCKED`
+- Lesson status: `LEARNING_REVIEW` (техника пройдена, ожидается Learning Assessment)
 - Last accepted lesson: None
-- Next allowed lesson: Week 1, Day 1 (текущее — снять блокировку)
+- Next allowed lesson: Week 1, Day 1 (текущее — Learning Assessment)
 - Training started: yes (2026-11-26)
 
 > Занятие Week 1, Day 1 выдано 2026-11-26 по команде пользователя.
 > Technical Assessment: попытка 1 — 43/100 (отозвана), попытка 2 — 72/100,
-> попытка 3 — 92/100 по содержимому, но **не зачтена**: изменения не закоммичены
-> (§14.4). Статус `BLOCKED` до коммита и отправки ветки.
+> попытка 3 — 92/100, порог пройден (коммит `2933304`, проверено на чистом
+> клоне). Техническая приёмка пройдена. Осталась Learning Assessment.
 > Learning Assessment **не проводился** (запрещено при непройденной технике).
 > Переход к Day 2 запрещён до `ACCEPTED`.
 
@@ -35,12 +35,12 @@
 - Accepted lessons: 0
 - Technical rework: 1
 - Learning rework: 0
-- Blocked lessons: 1
+- Blocked lessons: 0
 
 ## Active Assessment
 
-- Technical Assessment: 92/100 по содержимому — `BLOCKED` (не закоммичено)
-- Learning Assessment: — (не проводилась: сначала снять блокировку)
+- Technical Assessment: 92/100 — пройден (порог 85)
+- Learning Assessment: — (не проводилась; команда «Проверь знания»)
 
 Оценки выставляются только по факту выполненной проверки. Отсутствие значения
 означает, что проверка ещё не запускалась, а не нулевой балл.
@@ -72,9 +72,11 @@
 
 ### 2026-11-26 — Week 1, Day 1 — попытка 3
 
-**Статус:** `BLOCKED` — содержимое проходит, но не закоммичено
+**Статус:** техническая часть пройдена, ожидается Learning Assessment
 
-**Technical Assessment: 92/100** (порог 85) — **предварительно**, см. блокировку.
+Содержимое исправлено, все проверки выполнены на чистом клоне ветки.
+
+**Technical Assessment: 92/100** (порог 85) — **пройден**.
 
 Критерий «Тесты» неприменим к Дню 1, вес перераспределён (база 85, множитель
 100/85).
@@ -114,29 +116,30 @@
 | `git diff main...HEAD -- Cargo.lock` | пусто — lockfile продукта не изменён |
 | `git ls-files training/rust-basics/src/` | только `main.rs` |
 
-**Блокировка (§14.4):** содержимое соответствует требованиям, но изменения не
-закоммичены и не отправлены:
+**Как снята блокировка (§14.4):** изменения были закоммичены (`2933304`),
+рабочее дерево чистое. Проверка выполнена **на чистом клоне ветки**
+(`git clone --branch lesson/01-01-cargo-setup`), а не в рабочем каталоге, чтобы
+оценка относилась к содержимому ветки:
 
-```
- M .gitignore
-D  training/rust-basics/src/main
- M training/rust-basics/src/main.rs
-```
+| Проверка на чистом клоне | Результат |
+| --- | --- |
+| файлы под `training/` | только `Cargo.toml`, `Cargo.lock`, `.gitignore`, `src/main.rs` |
+| собранный бинарник | отсутствует |
+| `cargo run` в пакете | обе строки, `1.97` и сообщение Cargo |
+| `cargo fmt --all -- --check` | PASS |
+| `cargo fmt -- --check` в пакете | PASS, exit=0 |
+| `cargo clippy --workspace ... -D warnings` | PASS |
+| `cargo test --workspace` | 115 тестов, 0 падений |
+| `cargo metadata --no-deps` | `training` не в members |
+| `Cargo.lock` продукта против `origin/main` | не изменён |
 
-`git show HEAD:training/rust-basics/src/main.rs` всё ещё содержит одностаничную
-версию без второй строки, `HEAD` содержит бинарник. По §14.4 оценка не
-выставляется, пока `git status` не чистый и содержимое ветки не совпадает с
-проверенным. Требуется коммит и `git push`; после этого проверка занимает минуту,
-перезапуска решения не нужно.
+**Единственное незакрытое замечание:** хвостовой пробел в
+`exclude = ["training"] ` в корневом `Cargo.toml`. На оценку не влияет.
+Локальный файл `training/rust-basics/src/main` остался на диске — это нормально,
+он игнорируется и в ветку не попадает.
 
-**Остаётся мелочью:** хвостовой пробел в `exclude = ["training"] ` в корневом
-`Cargo.toml` (отмечен в попытках 1 и 2, не исправлен; на оценку не влияет,
-но это единственное незакрытое замечание). Файл `training/rust-basics/src/main`
-остался на диске — это нормально, он теперь игнорируется; удалять не обязательно.
-
-**Learning Assessment:** не проводился. Техническая часть по содержимому прошла
-порог, и вопросы Этапа A–B подготовлены, но оценка не выставляется до снятия
-блокировки.
+**Learning Assessment:** не проводился — техническая часть принята, учебная
+проверка выполняется отдельной командой «Проверь знания».
 
 ---
 
@@ -342,7 +345,7 @@ D  training/rust-basics/src/main
 
 | Lesson | Branch | Commit | Status | Merged |
 | ------ | ------ | ------ | ------ | ------ |
-| 01-01  | `lesson/01-01-cargo-setup` | `9aec58b` | TECHNICAL_REWORK | no |
+| 01-01  | `lesson/01-01-cargo-setup` | `2933304` | LEARNING_REVIEW | no |
 
 ## Session Log
 
@@ -355,10 +358,9 @@ D  training/rust-basics/src/main
 | 2026-11-26 | Работа над ошибками | edition, version, exclude, вывод версии исправлены |
 | 2026-11-26 | Technical Assessment, попытка 2 | 72/100 — `TECHNICAL_REWORK`, Learning не проводился |
 | 2026-11-26 | Исправления попытки 3 | бинарник убран из индекса, вторая строка добавлена, fmt проходит |
-| 2026-11-26 | Technical Assessment, попытка 3 | 92/100 по содержимому; `BLOCKED` — не закоммичено |
+| 2026-11-26 | Technical Assessment, попытка 3 | 92/100 — техническая приёмка пройдена (коммит `2933304`) |
 
 ## Next Action
 
-Закоммитить и отправить исправления попытки 3 в ветку `lesson/01-01-cargo-setup`,
-затем запросить снятие блокировки. После этого — Learning Assessment
-(Этапы A–D). Week 1, Day 2 не начинать.
+Провести Learning Assessment по команде «Проверь знания» (Этапы A–D).
+`ACCEPTED` и переход к Week 1, Day 2 — только после порога 80/100.
