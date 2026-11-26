@@ -1,4 +1,3 @@
 fn main() {
-	println!("Версия Rust - rustup 1.29.3 (2026-11-11)");
-    println!("Программа собрана Cargo");
+    println!("Минимальная версия Rust: {}", env!("CARGO_PKG_RUST_VERSION"));
 }
