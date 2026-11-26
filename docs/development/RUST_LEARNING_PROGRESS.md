@@ -15,14 +15,15 @@
 - Program: 12 weeks × 5 days = 60 lessons
 - Current week: 1
 - Current lesson: Week 1, Day 1
-- Current task: не выдана
-- Lesson status: `NOT_STARTED`
+- Current topic: Основы Rust, Cargo и структура проекта
+- Current task: создать `training/rust-basics`, исключить `training` из workspace, разобрать структуру Cargo-проекта
+- Lesson status: `IN_PROGRESS`
 - Last accepted lesson: None
-- Next allowed lesson: Week 1, Day 1
-- Training started: no
+- Next allowed lesson: Week 1, Day 1 (текущее)
+- Training started: yes (2026-11-26)
 
-> Обучение **не начато**. Первое занятие выдаётся только по явной команде
-> пользователя «Начать обучение». Агент не запускает обучение самостоятельно.
+> Занятие Week 1, Day 1 выдано 2026-11-26 по команде пользователя.
+> Обе оценки ещё не выставлялись. Переход к Day 2 запрещён до `ACCEPTED`.
 
 ## Overall Progress
 
@@ -83,7 +84,7 @@
 
 | Lesson | Branch | Commit | Status | Merged |
 | ------ | ------ | ------ | ------ | ------ |
-| —      | —      | —      | —      | —      |
+| 01-01  | `lesson/01-01-cargo-setup` | — | IN_PROGRESS | no |
 
 ## Session Log
 
