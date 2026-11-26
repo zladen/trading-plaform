@@ -12,7 +12,6 @@ skills-lock.json
 # Rust
 /target/
 **/*.rs.bk
-/training/rust-basics/target
 
 # Node
 node_modules/
