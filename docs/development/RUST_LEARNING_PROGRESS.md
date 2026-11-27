@@ -16,10 +16,10 @@
 - Current week: 1
 - Current lesson: Week 1, Day 1
 - Current topic: Основы Rust, Cargo и структура проекта
-- Current task: переоформить задание Дня 1 в границах программы
-- Lesson status: `BLOCKED`
+- Current task: `cargo new`, поля `[package]`, `fn main` + `println!`, `cargo run`, `target/` (границы Дня 1)
+- Lesson status: `IN_PROGRESS`
 - Last accepted lesson: None
-- Next allowed lesson: Week 1, Day 1 (после переоформления задания)
+- Next allowed lesson: Week 1, Day 1 (текущее, задание переоформлено)
 - Training started: yes (2026-11-26)
 
 > **Задание Дня 1 было выдано с нарушением §2.1 плана.**
@@ -28,8 +28,9 @@
 > Поэтому все три технические оценки (43, 72, 92) измеряли не материал Дня 1
 > и **аннулируются как оценка занятия**. Код в ветке корректен сам по себе и не
 > откатывается, но занятием Дня 1 он не является.
-> Текущий статус — `BLOCKED` до переоформления задания в границах программы.
-> Переход к Day 2 запрещён.
+> Текущий статус — `IN_PROGRESS`: задание переоформлено в границах программы
+> 2026-11-27. Упражнение с workspace и `exclude` остаётся в ветке как задел для
+> Недели 5 и в зачёт Дня 1 не входит. Переход к Day 2 запрещён до `ACCEPTED`.
 
 ## Overall Progress
 
@@ -37,7 +38,7 @@
 - Accepted lessons: 0
 - Technical rework: 0
 - Learning rework: 0
-- Blocked lessons: 1
+- Blocked lessons: 1 (снято переоформлением)
 
 ## Active Assessment
 
@@ -362,7 +363,7 @@
 
 | Lesson | Branch | Commit | Status | Merged |
 | ------ | ------ | ------ | ------ | ------ |
-| 01-01  | `lesson/01-01-cargo-setup` | `2933304` | BLOCKED (задание аннулировано) | no |
+| 01-01  | `lesson/01-01-cargo-setup` | `2933304` | IN_PROGRESS (задание переоформлено) | no |
 
 ## Session Log
 
@@ -380,7 +381,6 @@
 
 ## Next Action
 
-Переоформить задание Дня 1 строго по программе: `cargo new`, поля
-`[package]`, `fn main`, `println!`, `cargo build`/`cargo run`, `target/`.
-Упражнение с workspace и `exclude` перенести в Неделю 5. После переоформления —
-Technical Assessment заново, затем Learning Assessment.
+День 1 переоформлен: `cargo new`, поля `[package]`, `fn main` + `println!`,
+`cargo build`/`cargo run`, `target/`. Ждать выполнения. Упражнение с workspace
+и `exclude` — задел для Недели 5, в зачёт Дня 1 не идёт.
