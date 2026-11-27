@@ -587,7 +587,7 @@ edition = "2024"
 
 | Lesson | Branch | Commit | Status | Merged |
 | ------ | ------ | ------ | ------ | ------ |
-| 01-01  | `lesson/01-01-cargo-setup` | `71109b2` | ACCEPTED | pending |
+| 01-01  | `lesson/01-01-cargo-setup` | `71109b2` | ACCEPTED | yes (2026-11-27) |
 
 ## Session Log
 
